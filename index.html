@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>University Portal (Firebase)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Simple transition for view switching */
+        .view {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        /* Loading Spinner */
+        #loading-spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            z-index: 1000;
+        }
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner"></div>
+
+    <!-- Main Application Container -->
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8 pb-4 border-b">
+            <h1 class="text-3xl font-bold text-blue-600">University Portal</h1>
+            <button id="logout-button" class="hidden bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors">
+                Logout
+            </button>
+        </header>
+
+        <!-- View: Login Selection -->
+        <div id="view-login-select" class="view bg-white p-8 rounded-lg shadow-lg text-center">
+            <h2 class="text-2xl font-semibold mb-6">Welcome! Please select your role:</h2>
+            <div class="flex flex-col md:flex-row gap-4 justify-center">
+                <button id="select-student-login" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                    I am a Student
+                </button>
+                <button id="select-teacher-login" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                    I am a Teacher
+                </button>
+            </div>
+            <p id="auth-status" class="text-gray-500 mt-6"></p>
+        </div>
+
+        <!-- View: Student Login -->
+        <div id="view-student-login" class="view bg-white p-8 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold mb-6 text-center text-blue-700">Student Login</h2>
+            <form id="student-login-form">
+                <div class="mb-4">
+                    <label for="student-email" class="block text-gray-700 font-medium mb-2">Email</label>
+                    <input type="email" id="student-email" value="student@test.com" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="student-password" class="block text-gray-700 font-medium mb-2">Password</label>
+                    <input type="password" id="student-password" value="password123" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors">
+                    Login
+                </button>
+                <p id="student-login-error" class="text-red-500 text-center mt-4"></p>
+                <button type="button" id="show-student-signup" class="w-full text-green-600 hover:text-green-700 mt-4">Don't have an account? Sign up</button>
+                <button type="button" class="back-to-select w-full text-gray-600 hover:text-blue-600 mt-2">Back</button>
+            </form>
+        </div>
+        
+        <!-- View: Student Signup (NEW) -->
+        <div id="view-student-signup" class="view bg-white p-8 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold mb-6 text-center text-green-700">New Student Registration</h2>
+            <form id="student-signup-form">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="mb-4">
+                        <label for="signup-name" class="block text-gray-700 font-medium mb-2">Full Name</label>
+                        <input type="text" id="signup-name" class="w-full px-4 py-2 border rounded-lg" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="signup-studentid" class="block text-gray-700 font-medium mb-2">Student ID</label>
+                        <input type="text" id="signup-studentid" class="w-full px-4 py-2 border rounded-lg" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="signup-major" class="block text-gray-700 font-medium mb-2">Major</label>
+                        <input type="text" id="signup-major" class="w-full px-4 py-2 border rounded-lg" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="signup-year" class="block text-gray-700 font-medium mb-2">Year</label>
+                        <input type="number" id="signup-year" class="w-full px-4 py-2 border rounded-lg" required>
+                    </div>
+                    <div class="mb-4 md:col-span-2">
+                        <label for="signup-email" class="block text-gray-700 font-medium mb-2">Email</label>
+                        <input type="email" id="signup-email" class="w-full px-4 py-2 border rounded-lg" required>
+                    </div>
+                    <div class="mb-4 md:col-span-2">
+                        <label for="signup-password" class="block text-gray-700 font-medium mb-2">Password</label>
+                        <input type="password" id="signup-password" class="w-full px-4 py-2 border rounded-lg" required>
+                    </div>
+
+                    <!-- New Subject Selection Block -->
+                    <div class="md:col-span-2 mb-4">
+                        <label class="block text-gray-700 font-medium mb-2">Select Your Subjects</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 p-4 border rounded-lg bg-gray-50">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="course" value="C programming" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="ml-2 text-gray-700">C programming</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="course" value="Data Structure and Algorithms" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="ml-2 text-gray-700">Data Structure and Algorithms</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="course" value="Theory of computation" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="ml-2 text-gray-700">Theory of computation</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="course" value="Operating Systems" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="ml-2 text-gray-700">Operating Systems</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="course" value="Compiler Design" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="ml-2 text-gray-700">Compiler Design</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="w-full mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors">
+                    Register
+                </button>
+                <p id="student-signup-error" class="text-red-500 text-center mt-4"></p>
+                <button type="button" id="back-to-student-login" class="w-full text-gray-600 hover:text-blue-600 mt-2">Back to Login</button>
+            </form>
+        </div>
+        
+        <!-- View: Course Selection (NEW) - THIS IS NOW REMOVED -->
+        <!--
+        <div id="view-student-course-select" class="view bg-white p-8 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold mb-2">Select Your Courses</h2>
+            <p class="text-gray-600 mb-6">Welcome! Please select the courses you are enrolling in.</p>
+            <form id="course-select-form">
+                <div id="course-select-list" class="space-y-3 mb-6">
+                </div>
+                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors">
+                    Save Courses & Go to Dashboard
+                </button>
+            </form>
+        </div>
+        -->
+
+        <!-- View: Teacher Login -->
+        <div id="view-teacher-login" class="view bg-white p-8 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold mb-6 text-center text-green-700">Teacher Login</h2>
+            <form id="teacher-login-form">
+                <div class="mb-4">
+                    <label for="teacher-email" class="block text-gray-700 font-medium mb-2">Email</label>
+                    <input type="email" id="teacher-email" value="teacher@test.com" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="teacher-password" class="block text-gray-700 font-medium mb-2">Password</label>
+                    <input type="password" id="teacher-password" value="password123" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                </div>
+                <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors">
+                    Login
+                </button>
+                <p id="teacher-login-error" class="text-red-500 text-center mt-4"></p>
+                <button type="button" class="back-to-select w-full text-gray-600 hover:text-blue-600 mt-4">Back</button>
+            </form>
+        </div>
+
+        <!-- View: Student Dashboard -->
+        <div id="view-student-dashboard" class="view space-y-6">
+            <h2 id="student-welcome" class="text-3xl font-semibold text-blue-800"></h2>
+            
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2">My Information</h3>
+                <div id="student-info-content" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- JS will populate this -->
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2">My Courses & Assignments</h3>
+                <div id="student-courses-content" class="space-y-4">
+                    <!-- JS will populate this -->
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Teacher Dashboard (Subjects List) -->
+        <div id="view-teacher-dashboard" class="view space-y-6">
+            <h2 id="teacher-welcome" class="text-3xl font-semibold text-green-800"></h2>
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2">My Assigned Subjects</h3>
+                <div id="teacher-subjects-content" class="space-y-4">
+                    <!-- JS will populate this -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- View: Teacher Student List -->
+        <div id="view-teacher-student-list" class="view space-y-6">
+            <div class="flex justify-between items-center flex-wrap gap-4">
+                <h2 id="student-list-title" class="text-3xl font-semibold text-green-800"></h2>
+                <button type="button" class="back-to-teacher-dash bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow">
+                    &larr; Back to Subjects
+                </button>
+            </div>
+            <div id="teacher-student-list-content" class="bg-white p-6 rounded-lg shadow-md space-y-4">
+                <!-- JS will populate this -->
+            </div>
+        </div>
+
+        <!-- View: Teacher Student Submissions -->
+        <div id="view-teacher-student-submissions" class="view space-y-6">
+            <div class="flex justify-between items-center flex-wrap gap-4">
+                <h2 id="student-submissions-title" class="text-3xl font-semibold text-green-800"></h2>
+                <button type="button" class="back-to-student-list bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow">
+                    &larr; Back to Roster
+                </button>
+            </div>
+            <div id="teacher-student-submissions-content" class="bg-white p-6 rounded-lg shadow-md space-y-4">
+                <!-- JS will populate this -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Assignment Submission -->
+    <div id="assignment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-lg">
+            <h2 id="modal-title" class="text-2xl font-semibold mb-4">Submit Assignment</h2>
+            <form id="assignment-submit-form">
+                <input type="hidden" id="modal-course-id">
+                <div class="mb-4">
+                    <label for="assignment-file" class="block text-gray-700 font-medium mb-2">Upload your file:</label>
+                    <input type="file" id="assignment-file" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" required>
+                </div>
+                <div id="upload-progress-container" class="w-full bg-gray-200 rounded-full h-2.5 mb-4 hidden">
+                    <div id="upload-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p id="modal-error" class="text-red-500 text-center mt-4"></p>
+                <div class="flex justify-end gap-4 mt-6">
+                    <button type="button" id="modal-cancel" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" id="modal-submit-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors">
+                        Submit
+                    </button>
+                </div>
+            </form>
+            <p id="modal-success" class="text-green-600 font-medium text-center mt-4 hidden">Assignment submitted successfully!</p>
+        </div>
+    </div>
+
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            updateDoc, 
+            deleteDoc, 
+            onSnapshot, 
+            collection, 
+            query, 
+            where, 
+            addDoc, 
+            getDocs,
+            Timestamp,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import {
+            getStorage,
+            ref,
+            uploadBytesResumable,
+            getDownloadURL
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        // --- IMPORTANT: PASTE YOUR FIREBASE CONFIG HERE ---
+        // You get this from your Firebase project settings
+        
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyC01qb6SPNCmcWV8DkFCoDb919ak3MmX7Q",
+  authDomain: "college-project-7682b.firebaseapp.com",
+  projectId: "college-project-7682b",
+  storageBucket: "college-project-7682b.firebasestorage.app",
+  messagingSenderId: "203611455439",
+  appId: "1:203611455439:web:00e2760ae7ae604cbe1cba",
+  measurementId: "G-QJNCD8G4RF"
+};
+
+        // --- Provided Global Variables ---
+        // Use __app_id if available, otherwise use a default (or projectId)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        setLogLevel('Debug'); // Enable Firestore logging
+
+        // --- APPLICATION STATE ---
+        let appState = {
+            currentUser: null, // Firebase user object
+            userProfile: null, // { uid, role, name, ... }
+            currentView: 'login-select',
+            currentCourse: { id: null, name: null },
+            currentStudent: { id: null, name: null },
+            isSigningUp: false // Flag to prevent auth listener race condition
+        };
+
+        // --- DOM Elements ---
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const views = document.querySelectorAll('.view');
+        const logoutButton = document.getElementById('logout-button');
+        const backButtons = document.querySelectorAll('.back-to-select');
+        const authStatus = document.getElementById('auth-status');
+        
+        const selectStudentBtn = document.getElementById('select-student-login');
+        const selectTeacherBtn = document.getElementById('select-teacher-login');
+
+        // Student Login/Signup
+        const studentLoginForm = document.getElementById('student-login-form');
+        const studentEmailEl = document.getElementById('student-email');
+        const studentPasswordEl = document.getElementById('student-password');
+        const studentLoginError = document.getElementById('student-login-error');
+        const showStudentSignupBtn = document.getElementById('show-student-signup');
+        const backToStudentLoginBtn = document.getElementById('back-to-student-login');
+        
+        const studentSignupForm = document.getElementById('student-signup-form');
+        const signupName = document.getElementById('signup-name');
+        const signupStudentId = document.getElementById('signup-studentid');
+        const signupMajor = document.getElementById('signup-major');
+        const signupYear = document.getElementById('signup-year');
+        const signupEmail = document.getElementById('signup-email');
+        const signupPassword = document.getElementById('signup-password');
+        const studentSignupError = document.getElementById('student-signup-error');
+
+        // Course Select (REMOVED)
+        // const courseSelectForm = document.getElementById('course-select-form');
+        // const courseSelectList = document.getElementById('course-select-list');
+
+        // Teacher Login
+        const teacherLoginForm = document.getElementById('teacher-login-form');
+        const teacherEmailEl = document.getElementById('teacher-email');
+        const teacherPasswordEl = document.getElementById('teacher-password');
+        const teacherLoginError = document.getElementById('teacher-login-error');
+        
+        // Student Dashboard
+        const studentWelcome = document.getElementById('student-welcome');
+        const studentInfoContent = document.getElementById('student-info-content');
+        const studentCoursesContent = document.getElementById('student-courses-content');
+
+        // Teacher Dashboard
+        const teacherWelcome = document.getElementById('teacher-welcome');
+        const teacherSubjectsContent = document.getElementById('teacher-subjects-content');
+
+        // Teacher Student List
+        const studentListTitle = document.getElementById('student-list-title');
+        const teacherStudentListContent = document.getElementById('teacher-student-list-content');
+        const backToTeacherDash = document.querySelector('.back-to-teacher-dash');
+
+        // Teacher Student Submissions
+        const studentSubmissionsTitle = document.getElementById('student-submissions-title');
+        const teacherStudentSubmissionsContent = document.getElementById('teacher-student-submissions-content');
+        const backToStudentList = document.querySelector('.back-to-student-list');
+        
+        // Modal
+        const modal = document.getElementById('assignment-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalCancel = document.getElementById('modal-cancel');
+        const modalCourseId = document.getElementById('modal-course-id');
+        const assignmentSubmitForm = document.getElementById('assignment-submit-form');
+        const assignmentFileEl = document.getElementById('assignment-file');
+        const modalSuccess = document.getElementById('modal-success');
+        const modalError = document.getElementById('modal-error');
+        const uploadProgressContainer = document.getElementById('upload-progress-container');
+        const uploadProgressBar = document.getElementById('upload-progress-bar');
+        const modalSubmitBtn = document.getElementById('modal-submit-btn');
+
+        // --- Utility Functions ---
+        const showLoader = () => loadingSpinner.style.display = 'block';
+        const hideLoader = () => loadingSpinner.style.display = 'none';
+
+        function showView(viewId) {
+            views.forEach(view => {
+                view.style.display = view.id === `view-${viewId}` ? 'block' : 'none';
+            });
+            logoutButton.style.display = (viewId.includes('dashboard') || viewId.includes('teacher-')) ? 'block' : 'none';
+            appState.currentView = viewId;
+        }
+
+        // --- Firestore Collection References (Using Public Data Path) ---
+        const usersCol = collection(db, 'artifacts', appId, 'public/data/users');
+        const coursesCol = collection(db, 'artifacts', appId, 'public/data/courses');
+        const enrollmentCol = collection(db, 'artifacts', appId, 'public/data/enrollment');
+        const submissionsCol = collection(db, 'artifacts', appId, 'public/data/submissions');
+        const marksCol = collection(db, 'artifacts', appId, 'public/data/marks');
+
+        // --- AUTHENTICATION ---
+
+        // Listen for Auth state changes
+        onAuthStateChanged(auth, async (user) => {
+            showLoader();
+
+            // FIX: If signup is in progress, let that function handle the redirect
+            if (appState.isSigningUp) {
+                console.log("Signup in progress, onAuthStateChanged will not redirect.");
+                hideLoader();
+                return;
+            }
+
+            if (user) {
+                console.log("Auth user found:", user.uid);
+                authStatus.textContent = `Authenticated as ${user.email}`;
+                appState.currentUser = user;
+
+                // Get user's profile (role, name, etc.) from Firestore
+                const userDocRef = doc(usersCol, user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                    appState.userProfile = { uid: user.uid, ...userDocSnap.data() };
+                    console.log("User profile:", appState.userProfile);
+
+                    // Check for new student (no enrollments)
+                    const enrollmentQuery = query(enrollmentCol, where("studentId", "==", user.uid));
+                    const enrollmentSnap = await getDocs(enrollmentQuery);
+                    
+                    if (appState.userProfile.role === 'student' && enrollmentSnap.empty) {
+                        // New student, but signup flow now handles enrollment.
+                        // This block should ideally not be hit if signup is complete.
+                        // If it is, it's safer to just go to the dashboard.
+                        console.log("New student profile found, but no enrollments. Proceeding to dashboard.");
+                        renderStudentDashboard();
+                        showView('student-dashboard');
+                    } else if (appState.userProfile.role === 'student') {
+                        renderStudentDashboard();
+                        showView('student-dashboard');
+                    } else if (appState.userProfile.role === 'teacher') {
+                        renderTeacherDashboard();
+                        showView('teacher-dashboard');
+                    }
+                } else {
+                    // This case handles a new student signup
+                    console.log("No user profile found, likely new student.");
+                    // The signup function will handle redirection
+                }
+            } else {
+                console.log("No user authenticated.");
+                authStatus.textContent = "Not authenticated.";
+                appState.currentUser = null;
+                appState.userProfile = null;
+                showView('login-select');
+            }
+            hideLoader();
+        });
+
+        // Initial Auth
+        (async () => {
+            try {
+                const inCanvas = typeof __initial_auth_token !== 'undefined';
+                // Check if the config values are *not* the placeholders
+                const userHasProvidedConfig = firebaseConfig.apiKey !== "YOUR_API_KEY" 
+                                              && firebaseConfig.projectId !== "YOUR_PROJECT_ID";
+
+                if (inCanvas && !userHasProvidedConfig) {
+                    // User is in Canvas AND is using the default placeholder config.
+                    // We assume they want to use the environment's project.
+                    console.log("Using environment's auth token.");
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    // User is either not in Canvas, or (more likely) has provided their OWN config.
+                    // In this case, we MUST sign in anonymously to THEIR project.
+                    console.log("Signing in anonymously to user's project: " + firebaseConfig.projectId);
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Firebase auth init error:", error);
+                authStatus.textContent = "Authentication error.";
+            }
+        })();
+
+        async function handleStudentLogin(e) {
+            e.preventDefault();
+            showLoader();
+            studentLoginError.textContent = '';
+            try {
+                await signInWithEmailAndPassword(auth, studentEmailEl.value, studentPasswordEl.value);
+                // onAuthStateChanged will handle redirect
+            } catch (error) {
+                console.error("Student login error:", error);
+                studentLoginError.textContent = error.message;
+            }
+            hideLoader();
+        }
+
+        async function handleTeacherLogin(e) {
+            e.preventDefault();
+            showLoader();
+            teacherLoginError.textContent = '';
+            try {
+                await signInWithEmailAndPassword(auth, teacherEmailEl.value, teacherPasswordEl.value);
+                // onAuthStateChanged will handle redirect
+            } catch (error) {
+                console.error("Teacher login error:", error);
+                teacherLoginError.textContent = error.message;
+            }
+            hideLoader();
+        }
+
+        async function handleStudentSignup(e) {
+            e.preventDefault();
+            showLoader();
+            studentSignupError.textContent = '';
+            appState.isSigningUp = true; // Set the flag
+            
+            // 1. Get selected subject names from the form
+            const selectedSubjectNames = Array.from(studentSignupForm.querySelectorAll('input[name="course"]:checked'))
+                                              .map(cb => cb.value);
+
+            if (selectedSubjectNames.length === 0) {
+                studentSignupError.textContent = 'Please select at least one subject.';
+                hideLoader();
+                return;
+            }
+
+            try {
+                // 2. Create Auth user
+                const userCredential = await createUserWithEmailAndPassword(auth, signupEmail.value, signupPassword.value);
+                const user = userCredential.user;
+
+                // 3. Create user profile in Firestore
+                const userProfile = {
+                    role: 'student',
+                    name: signupName.value,
+                    studentId: signupStudentId.value,
+                    major: signupMajor.value,
+                    year: Number(signupYear.value)
+                };
+                
+                // Use user.uid as the document ID
+                const userDocRef = doc(usersCol, user.uid);
+                await setDoc(userDocRef, userProfile);
+                
+                // 4. Update local state
+                appState.currentUser = user;
+                appState.userProfile = { uid: user.uid, ...userProfile };
+
+                // 5. Find course IDs and create enrollments
+                const enrollmentPromises = [];
+                const coursesSnap = await getDocs(coursesCol);
+                const allCourses = [];
+                coursesSnap.forEach(doc => allCourses.push({ id: doc.id, ...doc.data() }));
+
+                selectedSubjectNames.forEach(subjectName => {
+                    const matchingCourse = allCourses.find(c => c.subject === subjectName);
+                    if (matchingCourse) {
+                        const enrollmentData = {
+                            studentId: user.uid,
+                            courseId: matchingCourse.id
+                        };
+                        enrollmentPromises.push(addDoc(enrollmentCol, enrollmentData));
+                    } else {
+                        console.warn(`No course found in Firestore for subject: ${subjectName}`);
+                    }
+                });
+
+                await Promise.all(enrollmentPromises);
+
+                // 6. Go to dashboard
+                // onAuthStateChanged will run, find the profile and enrollments, 
+                // and call renderStudentDashboard.
+                // We just need to wait for onAuthStateChanged to redirect.
+                // But to be faster, we can call it manually.
+                await renderStudentDashboard();
+                showView('student-dashboard');
+
+            } catch (error) {
+                console.error("Signup error:", error);
+                studentSignupError.textContent = error.message;
+            }
+            
+            appState.isSigningUp = false; // Unset the flag
+            hideLoader();
+        }
+
+        async function handleLogout() {
+            showLoader();
+            await signOut(auth);
+            // onAuthStateChanged will handle redirect to login-select
+            appState = { ...appState, currentUser: null, userProfile: null, currentCourse: {id: null, name: null}, currentStudent: {id: null, name: null} };
+            studentInfoContent.innerHTML = '';
+            studentCoursesContent.innerHTML = '';
+            teacherSubjectsContent.innerHTML = '';
+            teacherStudentListContent.innerHTML = '';
+            teacherStudentSubmissionsContent.innerHTML = '';
+            hideLoader();
+        }
+
+        // --- NEW STUDENT COURSE SELECTION --- (REMOVED)
+        /*
+        async function populateCourseSelection() {
+            showLoader();
+            const coursesSnap = await getDocs(coursesCol);
+            courseSelectList.innerHTML = '';
+            coursesSnap.forEach(doc => {
+                const course = doc.data();
+                course.id = doc.id;
+                courseSelectList.innerHTML += `
+                    <label class="flex items-center p-3 bg-gray-50 border rounded-lg hover:bg-gray-100">
+                        <input type="checkbox" name="course" value="${course.id}" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="ml-3 font-medium">${course.subject}</span>
+                    </label>
+                `;
+            });
+            hideLoader();
+        }
+
+        async function handleCourseSelection(e) {
+            e.preventDefault();
+            showLoader();
+            const selectedCourses = courseSelectForm.querySelectorAll('input[name="course"]:checked');
+            const studentId = appState.currentUser.uid;
+            
+            const enrollmentPromises = [];
+            selectedCourses.forEach(courseInput => {
+                const courseId = courseInput.value;
+                const enrollmentData = {
+                    studentId: studentId,
+                    courseId: courseId
+                };
+                // Add doc to enrollment collection
+                enrollmentPromises.push(addDoc(enrollmentCol, enrollmentData));
+            });
+
+            try {
+                await Promise.all(enrollmentPromises);
+                // Go to dashboard
+                renderStudentDashboard();
+                showView('student-dashboard');
+            } catch (error) {
+                console.error("Error saving courses:", error);
+            }
+            hideLoader();
+        }
+        */
+
+
+        // --- STUDENT DASHBOARD ---
+
+        async function renderStudentDashboard() {
+            showLoader();
+            const user = appState.userProfile;
+            studentWelcome.textContent = `Welcome, ${user.name}!`;
+
+            studentInfoContent.innerHTML = `
+                <p><strong>Name:</strong> ${user.name}</p>
+                <p><strong>Student ID:</strong> ${user.studentId}</p>
+                <p><strong>Major:</strong> ${user.major}</p>
+                <p><strong>Year:</strong> ${user.year}</p>
+            `;
+
+            // Get enrollments
+            const enrollmentQuery = query(enrollmentCol, where("studentId", "==", user.uid));
+            const enrollmentsSnap = await getDocs(enrollmentQuery);
+
+            if (enrollmentsSnap.empty) {
+                studentCoursesContent.innerHTML = '<p class="text-gray-500">You are not enrolled in any courses.</p>';
+                hideLoader();
+                return;
+            }
+            
+            // Get marks
+            const marksQuery = query(marksCol, where("studentId", "==", user.uid));
+            const marksSnap = await getDocs(marksQuery);
+            const marksMap = new Map(); // courseId -> mark
+            marksSnap.forEach(doc => {
+                const markData = doc.data();
+                marksMap.set(markData.courseId, markData.mark);
+            });
+
+            let coursesHtml = '';
+            for (const enrollmentDoc of enrollmentsSnap.docs) {
+                const courseId = enrollmentDoc.data().courseId;
+                const courseDocRef = doc(coursesCol, courseId);
+                const courseDocSnap = await getDoc(courseDocRef);
+
+                if (courseDocSnap.exists()) {
+                    const course = courseDocSnap.data();
+                    const teacherDocRef = doc(usersCol, course.teacherId);
+                    const teacherDocSnap = await getDoc(teacherDocRef);
+                    const teacherName = teacherDocSnap.exists() ? teacherDocSnap.data().name : 'N/A';
+                    
+                    const mark = marksMap.get(courseId);
+
+                    coursesHtml += `
+                        <div class="p-4 border rounded-lg bg-gray-50">
+                            <h4 class="text-lg font-semibold">${course.subject}</h4>
+                            <p class="text-sm text-gray-600"><strong>Instructor:</strong> ${teacherName}</p>
+                            <p class="text-sm text-gray-600"><strong>Semester:</strong> ${course.semester}</p>
+                            ${mark ? `<p class="text-lg font-bold text-green-600 mt-2">Mark: ${mark}</p>` : ''}
+                            <button 
+                                class="open-assignment-modal mt-3 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium py-2 px-3 rounded-lg shadow transition-colors"
+                                data-course-id="${courseId}"
+                                data-course-name="${course.subject}">
+                                Submit Assignment
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+            studentCoursesContent.innerHTML = coursesHtml;
+            hideLoader();
+        }
+
+        // --- ASSIGNMENT SUBMISSION ---
+
+        function openAssignmentModal(courseId, courseName) {
+            modalTitle.textContent = `Submit for: ${courseName}`;
+            modalCourseId.value = courseId;
+            assignmentSubmitForm.reset();
+            modalSuccess.style.display = 'none';
+            modalError.textContent = '';
+            assignmentSubmitForm.style.display = 'block';
+            uploadProgressContainer.style.display = 'none';
+            uploadProgressBar.style.width = '0%';
+            modalSubmitBtn.disabled = false;
+            modal.style.display = 'flex';
+        }
+
+        function closeAssignmentModal() {
+            modal.style.display = 'none';
+        }
+
+        async function handleAssignmentSubmit(e) {
+            e.preventDefault();
+            const file = assignmentFileEl.files[0];
+            const courseId = modalCourseId.value;
+            const studentId = appState.currentUser.uid;
+            
+            modalError.textContent = '';
+            if (!file) {
+                modalError.textContent = 'Please select a file to upload.';
+                return;
+            }
+
+            modalSubmitBtn.disabled = true;
+            showLoader(); // Use global loader for simplicity
+            
+            try {
+                // 1. Upload file to Storage
+                const storagePath = `submissions/${courseId}/${studentId}/${file.name}`;
+                const storageRef = ref(storage, storagePath);
+                const uploadTask = uploadBytesResumable(storageRef, file);
+
+                // Show progress bar
+                uploadProgressContainer.style.display = 'block';
+                uploadTask.on('state_changed', 
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        uploadProgressBar.style.width = progress + '%';
+                    }, 
+                    (error) => {
+                        console.error("Upload failed:", error);
+                        modalError.textContent = "File upload failed. Please try again.";
+                        modalSubmitBtn.disabled = false;
+                        hideLoader();
+                    }, 
+                    async () => {
+                        // 2. Get Download URL
+                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+                        // 3. Save submission info to Firestore
+                        await addDoc(submissionsCol, {
+                            studentId: studentId,
+                            courseId: courseId,
+                            fileName: file.name,
+                            downloadURL: downloadURL,
+                            submittedAt: Timestamp.now(),
+                            type: 'file'
+                        });
+                        
+                        assignmentSubmitForm.style.display = 'none';
+                        modalSuccess.style.display = 'block';
+                        hideLoader();
+                        setTimeout(closeAssignmentModal, 2000);
+                    }
+                );
+
+            } catch (error) {
+                console.error("Submission error:", error);
+                modalError.textContent = "An error occurred. Please try again.";
+                modalSubmitBtn.disabled = false;
+                hideLoader();
+            }
+        }
+
+        // --- TEACHER DASHBOARD ---
+
+        async function renderTeacherDashboard() {
+            showLoader();
+            const user = appState.userProfile;
+            teacherWelcome.textContent = `Welcome, ${user.name}!`;
+
+            const coursesQuery = query(coursesCol, where("teacherId", "==", user.uid));
+            const coursesSnap = await getDocs(coursesQuery);
+
+            if (coursesSnap.empty) {
+                teacherSubjectsContent.innerHTML = '<p class="text-gray-500">You are not assigned to any subjects.</p>';
+                hideLoader();
+                return;
+            }
+            
+            teacherSubjectsContent.innerHTML = coursesSnap.docs.map(doc => {
+                const course = doc.data();
+                course.id = doc.id;
+                return `
+                    <div class="p-4 border rounded-lg bg-gray-50 flex justify-between items-center">
+                        <div>
+                            <h4 class="text-lg font-semibold">${course.subject}</h4>
+                            <p class="text-sm text-gray-600"><strong>Semester:</strong> ${course.semester}</p>
+                        </div>
+                        <button 
+                            class="view-students-btn bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-3 rounded-lg shadow transition-colors"
+                            data-course-id="${course.id}"
+                            data-course-name="${course.subject}">
+                            View Roster
+                        </button>
+                    </div>
+                `;
+            }).join('');
+            hideLoader();
+        }
+        
+        async function renderStudentListForCourse(courseId, courseName) {
+            showLoader();
+            studentListTitle.textContent = `Roster for ${courseName}`;
+            
+            const enrollmentsQuery = query(enrollmentCol, where("courseId", "==", courseId));
+            const enrollmentsSnap = await getDocs(enrollmentsQuery);
+            
+            if (enrollmentsSnap.empty) {
+                teacherStudentListContent.innerHTML = '<p class="text-gray-500">No students are enrolled in this course.</p>';
+                hideLoader();
+                return;
+            }
+            
+            // Get all marks for this course
+            const marksQuery = query(marksCol, where("courseId", "==", courseId));
+            const marksSnap = await getDocs(marksQuery);
+            const marksMap = new Map(); // studentId -> mark
+            marksSnap.forEach(doc => {
+                const markData = doc.data();
+                marksMap.set(markData.studentId, markData.mark);
+            });
+
+            let studentsHtml = '';
+            for (const enrollmentDoc of enrollmentsSnap.docs) {
+                const studentId = enrollmentDoc.data().studentId;
+                const studentDocRef = doc(usersCol, studentId);
+                const studentDocSnap = await getDoc(studentDocRef);
+
+                if (studentDocSnap.exists()) {
+                    const student = studentDocSnap.data();
+                    const currentMark = marksMap.get(studentId) || '';
+                    studentsHtml += `
+                        <div class="p-4 border rounded-lg bg-gray-50">
+                            <div class_id="student-info" class="flex flex-col md:flex-row justify-between items-center">
+                                <div>
+                                    <p class="font-semibold">${student.name}</p>
+                                    <p class="text-sm text-gray-600">ID: ${student.studentId}</p>
+                                </div>
+                                <div class="flex gap-2 mt-3 md:mt-0">
+                                    <form class="save-mark-form flex gap-2">
+                                        <input type="hidden" name="studentId" value="${studentId}">
+                                        <input 
+                                            type="number" 
+                                            name="mark" 
+                                            class="w-24 px-2 py-1 border rounded-lg" 
+                                            placeholder="Mark" 
+                                            value="${currentMark}"
+                                            min="0" max="100" required
+                                        >
+                                        <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2 px-3 rounded-lg shadow">
+                                            Save Mark
+                                        </button>
+                                    </form>
+                                    <button class="view-student-submissions-btn bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-3 rounded-lg shadow"
+                                        data-student-id="${studentId}"
+                                        data-student-name="${student.name}">
+                                        View Submissions
+                                    </button>
+                                </div>
+                            </div>
+                            <p id="mark-status-${studentId}" class="text-green-600 text-sm mt-2"></p>
+                        </div>
+                    `;
+                }
+            }
+            teacherStudentListContent.innerHTML = studentsHtml;
+            hideLoader();
+        }
+
+        async function handleSaveMark(e) {
+            e.preventDefault();
+            showLoader();
+            const form = e.target;
+            const studentId = form.studentId.value;
+            const mark = form.mark.value;
+            const courseId = appState.currentCourse.id;
+            const teacherId = appState.currentUser.uid;
+            
+            const statusEl = document.getElementById(`mark-status-${studentId}`);
+            statusEl.textContent = '';
+            
+            try {
+                // Use a composite key for the doc ID to easily update/create
+                const markDocId = `${courseId}_${studentId}`;
+                const markDocRef = doc(marksCol, markDocId);
+                
+                await setDoc(markDocRef, {
+                    studentId: studentId,
+                    courseId: courseId,
+                    mark: Number(mark),
+                    teacherId: teacherId,
+                    updatedAt: Timestamp.now()
+                });
+                
+                statusEl.textContent = 'Mark saved!';
+                setTimeout(() => statusEl.textContent = '', 2000);
+                
+            } catch (error) {
+                console.error("Error saving mark:", error);
+                statusEl.textContent = 'Error saving.';
+            }
+            hideLoader();
+        }
+
+        async function renderSubmissions(courseId, courseName, studentId, studentName) {
+            showLoader();
+            studentSubmissionsTitle.textContent = `Submissions for ${studentName}`;
+            
+            const submissionsQuery = query(submissionsCol, 
+                where("courseId", "==", courseId), 
+                where("studentId", "==", studentId)
+            );
+            const submissionsSnap = await getDocs(submissionsQuery);
+            
+            let submissionsHtml = `<p class="text-gray-600 text-sm border-b pb-2">Course: ${courseName}</p>`;
+
+            if (submissionsSnap.empty) {
+                submissionsHtml += '<p class="text-gray-500">No submissions from this student for this course.</p>';
+            } else {
+                submissionsHtml += submissionsSnap.docs.map(doc => {
+                    const sub = doc.data();
+                    if (sub.type === 'file') {
+                        return `
+                            <div class="p-4 border rounded-lg bg-gray-50 flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-blue-600">File Submission:</p>
+                                    <p class="mt-1 text-lg">${sub.fileName}</p>
+                                    <p class="text-xs text-gray-500">Submitted: ${sub.submittedAt.toDate().toLocaleString()}</p>
+                                </div>
+                                <a href="${sub.downloadURL}" target="_blank" download
+                                   class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow">
+                                   Download File
+                                </a>
+                            </div>
+                        `;
+                    }
+                    return ''; // Add other types later if needed
+                }).join('');
+            }
+            
+            teacherStudentSubmissionsContent.innerHTML = submissionsHtml;
+            hideLoader();
+        }
+        
+
+        // --- EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            showView('login-select');
+
+            // Navigation
+            selectStudentBtn.addEventListener('click', () => showView('student-login'));
+            selectTeacherBtn.addEventListener('click', () => showView('teacher-login'));
+            backButtons.forEach(btn => btn.addEventListener('click', () => showView('login-select')));
+            showStudentSignupBtn.addEventListener('click', () => showView('student-signup'));
+            backToStudentLoginBtn.addEventListener('click', () => showView('student-login'));
+            
+            // Auth Forms
+            studentLoginForm.addEventListener('submit', handleStudentLogin);
+            teacherLoginForm.addEventListener('submit', handleTeacherLogin);
+            studentSignupForm.addEventListener('submit', handleStudentSignup);
+            // courseSelectForm.addEventListener('submit', handleCourseSelection); // REMOVED
+            
+            logoutButton.addEventListener('click', handleLogout);
+
+            // Back Buttons
+            backToTeacherDash.addEventListener('click', () => showView('teacher-dashboard'));
+            
+            backToStudentList.addEventListener('click', async () => {
+                const { id: courseId, name: courseName } = appState.currentCourse;
+                if (courseId) {
+                    await renderStudentListForCourse(courseId, courseName);
+                    showView('teacher-student-list');
+                } else {
+                    showView('teacher-dashboard'); // Fallback
+                }
+            });
+
+
+            // Dynamic listeners (using event delegation)
+            document.body.addEventListener('click', async (e) => {
+                const openModalBtn = e.target.closest('.open-assignment-modal');
+                const viewStudentsBtn = e.target.closest('.view-students-btn');
+                const viewSubmissionsBtn = e.target.closest('.view-student-submissions-btn');
+
+                if (openModalBtn) {
+                    const courseId = openModalBtn.dataset.courseId;
+                    const courseName = openModalBtn.dataset.courseName;
+                    openAssignmentModal(courseId, courseName);
+                }
+                
+                if (viewStudentsBtn) {
+                    const courseId = viewStudentsBtn.dataset.courseId;
+                    const courseName = viewStudentsBtn.dataset.courseName;
+                    appState.currentCourse = { id: courseId, name: courseName };
+                    await renderStudentListForCourse(courseId, courseName);
+                    showView('teacher-student-list');
+                }
+                
+                if (viewSubmissionsBtn) {
+                    const studentId = viewSubmissionsBtn.dataset.studentId;
+                    const studentName = viewSubmissionsBtn.dataset.studentName;
+                    appState.currentStudent = { id: studentId, name: studentName };
+                    
+                    const { id: courseId, name: courseName } = appState.currentCourse;
+                    await renderSubmissions(courseId, courseName, studentId, studentName);
+                    showView('teacher-student-submissions');
+                }
+            });
+
+            // Dynamic form submission
+            document.body.addEventListener('submit', (e) => {
+                if (e.target.classList.contains('save-mark-form')) {
+                    handleSaveMark(e);
+                }
+            });
+
+            // Modal listeners
+            modalCancel.addEventListener('click', closeAssignmentModal);
+            assignmentSubmitForm.addEventListener('submit', handleAssignmentSubmit);
+        });
+
+    </script>
+</body>
+</html>
+
